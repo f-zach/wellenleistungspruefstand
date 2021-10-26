@@ -21,7 +21,6 @@ float FRQmodule::getFrequency(bool twoFreq)
     if (twoFreq)
     {
         Serial1.write('n');
-        Serial.println('n');
 
         delay(1);
         i = 0;
@@ -41,3 +40,4 @@ float FRQmodule::getFrequency(bool twoFreq)
 
     Serial1.flush();
 }
+

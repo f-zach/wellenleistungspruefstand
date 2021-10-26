@@ -13,17 +13,9 @@ pt100rtd PT100 = pt100rtd();
 MAX31865::MAX31865(int cs_pin)
     : rtd(5000000,MSBFIRST,SPI_MODE1)
 {
-    if(cs_pin = 0)
-    {
-
-    }
-    else
-    {
-        pinMode(cs_pin, OUTPUT);
-        _cs_pin = cs_pin;
-        SPI.begin();
-    }
-    
+    pinMode(cs_pin, OUTPUT);
+    _cs_pin = cs_pin;
+    SPI.begin();
 }
 
 // In the config function different parameters of the MAX31865 can be set.
