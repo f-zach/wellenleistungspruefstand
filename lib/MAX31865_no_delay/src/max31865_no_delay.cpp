@@ -44,7 +44,7 @@ void MAX31865::config(int Rref, int mode, int wiring, int faultDetection, int fi
 
     _wiring = wiring << 4;
 
-    _fualtDetection = faultDetection << 2;
+    _faultDetection = faultDetection << 2;
 
     _filter = filter;
 
@@ -52,7 +52,7 @@ void MAX31865::config(int Rref, int mode, int wiring, int faultDetection, int fi
     _startOneShot = _addr_write_config;
     _VBias_off = _addr_write_config;
 
-    _configuration = 0 + _mode + _wiring + _fualtDetection + _filter;
+    _configuration = 0 + _mode + _wiring + _faultDetection + _filter;
 
     _startOneShot = _startOneShot << 8 | (_configuration + (B101 << 5));
 
