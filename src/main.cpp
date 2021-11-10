@@ -26,6 +26,8 @@ bool fault;
 
 void setup()
 {
+  delay(5000);
+
   Serial.begin(9600);
   Serial4.begin(9600);
 
@@ -41,13 +43,14 @@ void setup()
 
   SPI.begin();
 
-  MAIN.config();
+  MAIN.config(8);
   
   ADC.config(B00000111);
 
   TCO.config(B01010100, 1);
 
  digitalWrite(LED_BUSY,LOW);
+ Serial.println("Setup done");
 }
 
 void loop()
@@ -63,6 +66,7 @@ void loop()
   {
   //Case 'r': Lese alle Module aus
   case 'r':
+    
     digitalWriteFast(LED_BUSY, HIGH);
 
     MAIN.startTmeasurement();
@@ -74,42 +78,35 @@ void loop()
     FRQ.getFrequency(1);
 
     MAIN.readEnvP();
+  
     MAIN.readEnvT();
 
     readGoPowerBox();
-
+  
+    i = 0;
     //Baue String für die Ausgabe über Serial auf
-    for (i = 0; i < ADC.channelCount; i++)
+    for (int j = 0; j < i + ADC.channelCount; j++)
     {
-      Serial.print(ADC.Voltage[i],5);
-      Serial.print("\t");
+      MAIN.SensorData[i] = ADC.Voltage[j];
+      ++i;
     }
 
-    for (i = 0; i < TCO.sensorCount; i++)
+    for (int j = 0; j < TCO.sensorCount; j++)
     {
-      Serial.print(TCO.TemperatureC[i]);
-      Serial.print("\t");
+      MAIN.SensorData[i] = TCO.TemperatureC[j];
+      ++i;
     }
 
-    Serial.print(FRQ.frequency1);
-    Serial.print("\t");
+    MAIN.SensorData[i] = FRQ.frequency1; ++i;
+    MAIN.SensorData[i] = FRQ.frequency2; ++i;
 
-    Serial.print(FRQ.frequency2);
-    Serial.print("\t");
-
-    for(int i = 0; i<3; i++)
+    for(int j = 0; j<3; ++j)
     {
-      Serial.print(dataGoPowerBox[i]);
-      Serial.print("\t");
+      MAIN.SensorData[i] = dataGoPowerBox[i];
+      ++i;
     }
 
-    Serial.print(MAIN.envPressure);
-    Serial.print("\t");
-
-    Serial.print(MAIN.envTemperature);
-    Serial.print("\t");
-
-    Serial.println();
+    Serial.println(MAIN.makeDataString());
 
     command = 0;
     digitalWriteFast(LED_BUSY, LOW);
