@@ -5,6 +5,7 @@
 #include <ADC.h>
 #include <TCO.h>
 #include <FRQ.h>
+#include <PRS.h>
 
 #define LED_ERR 5
 #define LED_BUSY 6
@@ -13,6 +14,7 @@ MAINmodule MAIN(24, 0x76);
 ADCmodule ADC(0x49, 0x48);
 TCOmodule TCO(0x20);
 FRQmodule FRQ(115200);
+PRSmodule PRS(0x70);
 
 void readGoPowerBox();
 // Konstruktoren für alle Module
@@ -22,6 +24,13 @@ int val, sensor_cs, i;
 float frequnecy, torque, power;
 char command;
 bool fault;
+
+float pressRanges[8]={150,150,150,150,0,0,0,0};
+int unitSensor[8] = {MILLIBAR,MILLIBAR,MILLIBAR,MILLIBAR,0,0,0,0};
+int unitReq[8] = {MILLIBAR,MILLIBAR,MILLIBAR,MILLIBAR,0,0,0,0};
+byte sensorI2Caddress [8] = {0x28, 0x28, 0x28, 0x28, 0, 0, 0, 0};
+
+
 
 void setup()
 {
@@ -45,7 +54,9 @@ void setup()
 
   ADC.config(B00000111);
 
-  TCO.config(B00000111, 1);
+  TCO.config(B01111111, 1);
+
+  PRS.config(B00001111, pressRanges, B00001111, unitSensor, unitReq, sensorI2Caddress);
 
   digitalWrite(LED_BUSY, LOW);
 }
@@ -56,11 +67,14 @@ void loop()
 
   MAIN.startTmeasurement();
 
+
   ADC.readAll();
 
   TCO.readTempAll();
 
   FRQ.getFrequency(1);
+
+  PRS.readPressAll();
 
   MAIN.readEnvP();
   MAIN.readEnvT();
@@ -80,50 +94,50 @@ void loop()
   }
 
   // Switch zur ausführung der Befehle
-  switch (command)
-  {
-  // Case 'r': Lese alle Module aus
-  case 'r':
-    // Baue String für die Ausgabe über Serial auf
-    for (i = 0; i < ADC.channelCount; i++)
-    {
-      Serial.print(ADC.Voltage[i], 5);
-      Serial.print("\t");
-    }
+  // switch (command)
+  // {
+  // // Case 'r': Lese alle Module aus
+  // case 'r':
+  //   // Baue String für die Ausgabe über Serial auf
+  //   for (i = 0; i < ADC.channelCount; i++)
+  //   {
+  //     Serial.print(ADC.Voltage[i], 5);
+  //     Serial.print("\t");
+  //   }
 
-    for (i = 0; i < TCO.sensorCount; i++)
-    {
-      Serial.print(TCO.TemperatureC[i]);
-      Serial.print("\t");
-    }
+  //   for (i = 0; i < TCO.sensorCount; i++)
+  //   {
+  //     Serial.print(TCO.TemperatureC[i]);
+  //     Serial.print("\t");
+  //   }
 
-    Serial.print(FRQ.frequency1);
-    Serial.print("\t");
+  //   Serial.print(FRQ.frequency1);
+  //   Serial.print("\t");
 
-    // Serial.print(FRQ.frequency2);
-    // Serial.print("\t");
+  //   // Serial.print(FRQ.frequency2);
+  //   // Serial.print("\t");
 
-    Serial.print(rpmBrake);
-    Serial.print("\t");
+  //   Serial.print(rpmBrake);
+  //   Serial.print("\t");
 
-    Serial.print(torque);
-    Serial.print("\t");
+  //   Serial.print(torque);
+  //   Serial.print("\t");
 
-    Serial.print(power);
-    Serial.print("\t");
+  //   Serial.print(power);
+  //   Serial.print("\t");
 
-    Serial.print(MAIN.envPressure);
-    Serial.print("\t");
+  //   Serial.print(MAIN.envPressure);
+  //   Serial.print("\t");
 
-    Serial.print(MAIN.envTemperature);
-    Serial.print("\t");
+  //   Serial.print(MAIN.envTemperature);
+  //   Serial.print("\t");
 
-    Serial.println();
+  //   Serial.println();
 
-    command = 0;
-    digitalWriteFast(LED_BUSY, LOW);
-    break;
-  }
+  //   command = 0;
+  //   digitalWriteFast(LED_BUSY, LOW);
+  //   break;
+  // }
 
   if (millis() - tLastSentPC >= 100)
   {
@@ -140,7 +154,7 @@ void loop()
       Serial.print("\t");
     }
 
-    Serial.print(FRQ.frequency1);
+    Serial.print(FRQ.frequency1 * 60);
     Serial.print("\t");
 
     // Serial.print(FRQ.frequency2);
@@ -154,6 +168,13 @@ void loop()
 
     Serial.print(power);
     Serial.print("\t");
+
+    for (size_t i = 0; i < PRS.SensorCount; i++)
+    {
+      Serial.print(PRS.Pressure[i]);
+      Serial.print("\t");
+    }
+    
 
     Serial.print(MAIN.envPressure);
     Serial.print("\t");
