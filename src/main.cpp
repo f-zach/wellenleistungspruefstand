@@ -10,11 +10,14 @@
 #define LED_ERR 5
 #define LED_BUSY 6
 
-MAINmodule MAIN(24, 0x76);
+MAINmodule MAIN(24, 0x76,80);
 ADCmodule ADC(0x49, 0x48);
 TCOmodule TCO(0x20);
 FRQmodule FRQ(115200);
 PRSmodule PRS(0x70);
+
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip(137, 193, 91, 147);
 
 void readGoPowerBox();
 // Konstruktoren für alle Module
@@ -24,6 +27,7 @@ int val, sensor_cs, i;
 float frequnecy, torque, power;
 char command;
 bool fault;
+String dataString;
 
 float pressRanges[8]={150,150,150,150,0,0,0,0};
 int unitSensor[8] = {MILLIBAR,MILLIBAR,MILLIBAR,MILLIBAR,0,0,0,0};
@@ -51,6 +55,7 @@ void setup()
   SPI.begin();
 
   MAIN.config();
+  MAIN.LANsetup(mac,ip);
 
   ADC.config(B00000111);
 
@@ -139,50 +144,45 @@ void loop()
   //   break;
   // }
 
-  if (millis() - tLastSentPC >= 100)
-  {
-    // Baue String für die Ausgabe über Serial auf
+  dataString = "";
+
+  // Baue String für die Ausgabe über Serial auf
     for (i = 0; i < ADC.channelCount; i++)
     {
-      Serial.print(ADC.Voltage[i], 5);
-      Serial.print("\t");
+      dataString += String(ADC.Voltage[i], 5) + "\t";
     }
 
     for (i = 0; i < TCO.sensorCount; i++)
     {
-      Serial.print(TCO.TemperatureC[i]);
-      Serial.print("\t");
+      dataString += String(TCO.TemperatureC[i]) + "\t";
     }
 
-    Serial.print(FRQ.frequency1 * 60);
-    Serial.print("\t");
+    dataString += String(FRQ.frequency1 * 60) + "\t";
 
-    // Serial.print(FRQ.frequency2);
-    // Serial.print("\t");
+    dataString += String(rpmBrake) + "\t";
 
-    Serial.print(rpmBrake);
-    Serial.print("\t");
+    dataString += String(torque) + "\t";
 
-    Serial.print(torque);
-    Serial.print("\t");
-
-    Serial.print(power);
-    Serial.print("\t");
+    dataString += String(power) + "\t";
 
     for (size_t i = 0; i < PRS.SensorCount; i++)
     {
-      Serial.print(PRS.Pressure[i]);
-      Serial.print("\t");
+      dataString += String(PRS.Pressure[i]) + "\t";
     }
     
 
-    Serial.print(MAIN.envPressure);
-    Serial.print("\t");
+    dataString += String(MAIN.envPressure) + "\t";
 
-    Serial.print(MAIN.envTemperature);
-    Serial.print("\t");
+    dataString += String(MAIN.envTemperature) + "\n";
 
-    Serial.println();
+  if(MAIN.clientConnected())
+  {
+  MAIN.printDataLAN(dataString);
+  }  
+
+  if (millis() - tLastSentPC >= 100)
+  {
+    Serial.print(dataString);
 
     command = 0;
 
