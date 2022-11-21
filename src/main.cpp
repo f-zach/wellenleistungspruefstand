@@ -10,8 +10,8 @@
 #define LED_ERR 5
 #define LED_BUSY 6
 
-MAINmodule MAIN(24, 0x76,80);
-ADCmodule ADC(0x49, 0x48);
+MAINmodule MAIN(24, 0x76, 80);
+ADCmodule ADC(0x49, 0x4A);
 TCOmodule TCO(0x20);
 FRQmodule FRQ(115200);
 PRSmodule PRS(0x70);
@@ -22,19 +22,17 @@ IPAddress ip(137, 193, 91, 147);
 void readGoPowerBox();
 // Konstruktoren für alle Module
 
-long t, tMeasurementStart, rpmBrake, tLastSentCont = 0, tLastSentPC = 0;
+long t, tMeasurementStart, tLastFrequencyMeasurement, rpmBrake, tLastSentCont = 0, tLastSentPC = 0;
 int val, sensor_cs, i;
 float frequnecy, torque, power;
 char command;
 bool fault;
 String dataString;
 
-float pressRanges[8]={150,150,150,150,0,0,0,0};
-int unitSensor[8] = {MILLIBAR,MILLIBAR,MILLIBAR,MILLIBAR,0,0,0,0};
-int unitReq[8] = {MILLIBAR,MILLIBAR,MILLIBAR,MILLIBAR,0,0,0,0};
-byte sensorI2Caddress [8] = {0x28, 0x28, 0x28, 0x28, 0, 0, 0, 0};
-
-
+float pressRanges[8] = {100, 100, 1.6, 0, 0, 1.6, 100, 100};
+int unitSensor[8] = {MILLIBAR, MILLIBAR, BAR, 0, 0, BAR, MILLIBAR, MILLIBAR};
+int unitReq[8] = {MILLIBAR, MILLIBAR, MILLIBAR, MILLIBAR, 0, 0, 0, 0};
+byte sensorI2Caddress[8] = {0x48, 0x48, 0x28, 0, 0, 0x28, 0x48, 0x48};
 
 void setup()
 {
@@ -48,8 +46,7 @@ void setup()
 
   digitalWrite(LED_BUSY, HIGH);
 
-  delay(5000);
-
+  delay(500);
   Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19);
 
   SPI.begin();
@@ -59,9 +56,9 @@ void setup()
 
   ADC.config(B00000111);
 
-  TCO.config(B01111111, 1);
+  TCO.config(B011111, 1);
 
-  PRS.config(B00001111, pressRanges, B00001111, unitSensor, unitReq, sensorI2Caddress);
+  PRS.config(B11100111, pressRanges, B11000011, unitSensor, unitReq, sensorI2Caddress);
 
   digitalWrite(LED_BUSY, LOW);
 }
@@ -72,19 +69,19 @@ void loop()
 
   MAIN.startTmeasurement();
 
-
   ADC.readAll();
 
   TCO.readTempAll();
 
-  FRQ.getFrequency(1);
-
+  FRQ.getFrequency(0);
+ 
   PRS.readPressAll();
 
   MAIN.readEnvP();
   MAIN.readEnvT();
 
   readGoPowerBox();
+  
   // Lese Befehlssymbol
   if (Serial.available())
   {
@@ -147,38 +144,37 @@ void loop()
   dataString = "";
 
   // Baue String für die Ausgabe über Serial auf
-    for (i = 0; i < ADC.channelCount; i++)
-    {
-      dataString += String(ADC.Voltage[i], 5) + "\t";
-    }
+  for (i = 0; i < ADC.channelCount; i++)
+  {
+    dataString += String(ADC.Voltage[i], 5) + "\t";
+  }
 
-    for (i = 0; i < TCO.sensorCount; i++)
-    {
-      dataString += String(TCO.TemperatureC[i]) + "\t";
-    }
+  for (i = 0; i < TCO.sensorCount; i++)
+  {
+    dataString += String(TCO.TemperatureC[i]) + "\t";
+  }
 
-    dataString += String(FRQ.frequency1 * 60) + "\t";
+  dataString += String(FRQ.frequency1 * 60) + "\t";
 
-    dataString += String(rpmBrake) + "\t";
+  dataString += String(rpmBrake) + "\t";
 
-    dataString += String(torque) + "\t";
+  dataString += String(torque) + "\t";
 
-    dataString += String(power) + "\t";
+  dataString += String(power) + "\t";
 
-    for (size_t i = 0; i < PRS.SensorCount; i++)
-    {
-      dataString += String(PRS.Pressure[i]) + "\t";
-    }
-    
+  for (size_t i = 0; i < PRS.SensorCount; i++)
+  {
+    dataString += String(PRS.Pressure[i]) + "\t";
+  }
 
-    dataString += String(MAIN.envPressure) + "\t";
+  dataString += String(MAIN.envPressure) + "\t";
 
-    dataString += String(MAIN.envTemperature) + "\n";
+  dataString += String(MAIN.envTemperature) + "\n";
 
   if(MAIN.clientConnected())
   {
-  MAIN.printDataLAN(dataString);
-  }  
+    MAIN.printDataLAN(dataString);
+  }
 
   if (millis() - tLastSentPC >= 100)
   {
